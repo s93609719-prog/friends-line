@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DJ Party - Multi-Device Sync Player</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fdf4ff',
+                            100: '#fae8ff',
+                            500: '#d946ef',
+                            600: '#c026d3',
+                            700: '#a21caf',
+                            900: '#701a75',
+                            neon: '#00ffcc',
+                            hot: '#ff007f'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts Inter & Orbitron -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0a0f;
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+        .orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111118;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3b0764;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a21caf;
+        }
+        .neon-glow {
+            text-shadow: 0 0 10px rgba(217, 70, 239, 0.7), 0 0 20px rgba(217, 70, 239, 0.5), 0 0 30px rgba(0, 255, 204, 0.4);
+        }
+        .neon-box {
+            box-shadow: 0 0 20px rgba(217, 70, 239, 0.25), inset 0 0 15px rgba(0, 255, 204, 0.1);
+            border: 1px solid rgba(217, 70, 239, 0.3);
+        }
+        .neon-box-active {
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.5), inset 0 0 20px rgba(217, 70, 239, 0.2);
+            border: 1px solid rgba(0, 255, 204, 0.6);
+        }
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        .animate-pulse-glow {
+            animation: pulseGlow 4s infinite ease-in-out;
+        }
+        @keyframes equalizer {
+            0% { height: 10px; }
+            50% { height: 45px; }
+            100% { height: 10px; }
+        }
+        .eq-bar {
+            animation: equalizer 1.2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-gradient-to-br from-slate-950 via-purple-950 to-black text-white relative selection:bg-fuchsia-500 selection:text-white">
+
+    <!-- Ambient Glows -->
+    <div class="absolute top-0 left-1/4 w-96 h-96 bg-fuchsia-600/20 rounded-full blur-[120px] pointer-events-none animate-pulse-glow"></div>
+    <div class="absolute bottom-1/4 right-1/4 w-[30rem] h-[30rem] bg-cyan-600/15 rounded-full blur-[150px] pointer-events-none animate-pulse-glow" style="animation-delay: 2s;"></div>
+
+    <!-- Room Modal -->
+    <div id="roomModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div class="neon-box bg-slate-900/90 rounded-3xl p-6 sm:p-10 w-full max-w-md shadow-2xl relative overflow-hidden">
+            <div class="absolute -right-16 -top-16 w-40 h-40 bg-fuchsia-500/20 rounded-full blur-2xl"></div>
+            
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-fuchsia-600 to-cyan-500 text-white shadow-lg mb-4 neon-box-active">
+                    <i data-lucide="disc" class="w-8 h-8 animate-spin" style="animation-duration: 8s;"></i>
+                </div>
+                <h1 class="orbitron text-2xl sm:text-3xl font-black tracking-wider bg-gradient-to-r from-fuchsia-400 via-pink-300 to-cyan-400 bg-clip-text text-transparent">MASS DJ PARTY</h1>
+                <p class="text-xs sm:text-sm text-slate-400 mt-2">Connect unlimited devices, sync music instantly & party together!</p>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Your DJ Nickname</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-fuchsia-400">
+                            <i data-lucide="user" class="w-5 h-5"></i>
+                        </span>
+                        <input type="text" id="usernameInput" value="PartyRockr" class="w-full pl-10 pr-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl focus:outline-none focus:border-fuchsia-500 text-white placeholder-slate-600 text-sm font-medium transition" placeholder="Enter your name">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Party Room Code</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-cyan-400">
+                            <i data-lucide="hash" class="w-5 h-5"></i>
+                        </span>
+                        <input type="text" id="roomCodeInput" value="VIP-MASS-99" class="w-full pl-10 pr-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 text-white placeholder-slate-600 uppercase text-sm font-bold tracking-widest transition" placeholder="e.g. PARTY2026">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 pt-2">
+                    <button onclick="joinParty('admin')" class="w-full py-3.5 px-4 bg-gradient-to-r from-fuchsia-600 to-pink-600 hover:from-fuchsia-500 hover:to-pink-500 text-white font-bold rounded-xl shadow-lg shadow-fuchsia-600/30 transition transform active:scale-95 flex items-center justify-center gap-2 text-sm orbitron">
+                        <i data-lucide="shield-check" class="w-4 h-4"></i> Create / Admin
+                    </button>
+                    <button onclick="joinParty('guest')" class="w-full py-3.5 px-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold rounded-xl shadow-lg shadow-cyan-600/30 transition transform active:scale-95 flex items-center justify-center gap-2 text-sm orbitron">
+                        <i data-lucide="users" class="w-4 h-4"></i> Join Guest
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-xl sticky top-0 z-40 px-4 sm:px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-fuchsia-600 to-cyan-500 flex items-center justify-center shadow-md neon-box-active">
+                <i data-lucide="radio" class="w-5 h-5 text-white animate-pulse"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="orbitron font-black text-base sm:text-lg tracking-wider bg-gradient-to-r from-fuchsia-400 to-cyan-400 bg-clip-text text-transparent">MASS PARTY</span>
+                    <span id="roomBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-fuchsia-500/20 border border-fuchsia-500/40 text-fuchsia-300 font-bold uppercase">Room: VIP-MASS-99</span>
+                </div>
+                <p class="text-xs text-slate-400 flex items-center gap-1.5">
+                    <span id="roleBadgeDisplay" class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span id="userRoleText">Logged in as Admin</span>
+                </p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-4">
+            <button onclick="openDevicesModal()" class="hidden sm:flex items-center gap-2 bg-slate-900/90 border border-slate-800 hover:border-slate-700 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-300 transition">
+                <i data-lucide="smartphone" class="w-4 h-4 text-cyan-400"></i>
+                <span id="deviceCountText">4 Devices Connected</span>
+            </button>
+            <button onclick="openShareModal()" class="p-2.5 bg-slate-900 border border-slate-800 hover:border-fuchsia-500/50 rounded-xl text-slate-300 hover:text-white transition" title="Share Room">
+                <i data-lucide="share-2" class="w-4 h-4"></i>
+            </button>
+            <div class="hidden md:flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-xl">
+                <i data-lucide="volume-2" class="w-4 h-4 text-fuchsia-400"></i>
+                <input type="range" id="masterVolume" min="0" max="100" value="80" oninput="updateMasterVolume(this.value)" class="w-20 accent-fuchsia-500 cursor-pointer">
+            </div>
+            <button onclick="leaveRoom()" class="p-2.5 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 text-rose-400 rounded-xl transition" title="Leave">
+                <i data-lucide="log-out" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left / Center Column -->
+        <div class="lg:col-span-8 flex flex-col gap-6">
+            
+            <!-- Player Screen -->
+            <div class="neon-box bg-slate-900/80 backdrop-blur-xl rounded-3xl p-5 sm:p-6 relative overflow-hidden flex flex-col justify-between shadow-2xl">
+                <div class="absolute inset-0 bg-gradient-to-tr from-fuchsia-900/10 via-transparent to-cyan-900/10 pointer-events-none"></div>
+
+                <div class="flex items-center justify-between mb-4 relative z-10">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
+                        <span class="orbitron text-xs font-bold tracking-widest text-fuchsia-400 uppercase">LIVE SYNC STREAM</span>
+                    </div>
+                    <div id="controlModeIndicator" class="text-xs px-3 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-semibold flex items-center gap-1.5">
+                        <i data-lucide="shield" class="w-3.5 h-3.5"></i> Admin DJ Active
+                    </div>
+                </div>
+
+                <div id="youtubePlayerContainer" class="hidden"></div>
+
+                <div class="relative w-full aspect-video sm:aspect-[21/9] rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center border border-slate-800/80 shadow-inner mb-5 group">
+                    <img id="currentSongBg" src="https://placehold.co/1200x600/111827/d946ef?text=DJ+Party+Vibes" class="absolute inset-0 w-full h-full object-cover opacity-30 filter blur-sm group-hover:scale-105 transition duration-700" alt="Backdrop">
+                    
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
+
+                    <div class="absolute bottom-4 left-6 right-6 flex items-end justify-between pointer-events-none opacity-60 h-12">
+                        <div class="w-1.5 bg-fuchsia-500 rounded-full eq-bar" style="animation-delay: 0.1s;"></div>
+                        <div class="w-1.5 bg-cyan-400 rounded-full eq-bar" style="animation-delay: 0.4s;"></div>
+                        <div class="w-1.5 bg-pink-500 rounded-full eq-bar" style="animation-delay: 0.2s;"></div>
+                        <div class="w-1.5 bg-fuchsia-400 rounded-full eq-bar" style="animation-delay: 0.7s;"></div>
+                        <div class="w-1.5 bg-cyan-500 rounded-full eq-bar" style="animation-delay: 0.3s;"></div>
+                        <div class="w-1.5 bg-purple-500 rounded-full eq-bar" style="animation-delay: 0.5s;"></div>
+                        <div class="w-1.5 bg-pink-400 rounded-full eq-bar" style="animation-delay: 0.2s;"></div>
+                        <div class="w-1.5 bg-cyan-400 rounded-full eq-bar" style="animation-delay: 0.6s;"></div>
+                        <div class="w-1.5 bg-fuchsia-500 rounded-full eq-bar" style="animation-delay: 0.1s;"></div>
+                        <div class="w-1.5 bg-purple-400 rounded-full eq-bar" style="animation-delay: 0.4s;"></div>
+                        <div class="w-1.5 bg-cyan-500 rounded-full eq-bar" style="animation-delay: 0.3s;"></div>
+                        <div class="w-1.5 bg-pink-500 rounded-full eq-bar" style="animation-delay: 0.5s;"></div>
+                    </div>
+
+                    <div class="relative z-10 text-center px-4 max-w-lg">
+                        <span id="currentSongTag" class="inline-block px-3 py-1 rounded-full bg-fuchsia-500/30 border border-fuchsia-500/50 text-fuchsia-300 text-xs font-bold mb-2 uppercase tracking-wider">Now Playing</span>
+                        <h2 id="currentSongTitle" class="orbitron text-lg sm:text-2xl font-black text-white drop-shadow-md line-clamp-1">Kuthu Mass Remix - Party Anthem</h2>
+                        <p id="currentSongArtist" class="text-xs sm:text-sm text-slate-300 mt-1">DJ Master Beats • Requested by PartyRockr</p>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5 mb-5 relative z-10">
+                    <div class="flex justify-between text-xs font-medium text-slate-400">
+                        <span id="currentTimeDisplay">01:24</span>
+                        <span id="totalDurationDisplay">03:45</span>
+                    </div>
+                    <div onclick="seekTrack(event)" class="w-full h-2 bg-slate-950 rounded-full overflow-hidden cursor-pointer relative group">
+                        <div id="progressBarFill" class="h-full bg-gradient-to-r from-fuchsia-500 to-cyan-400 w-1/3 rounded-full transition-all duration-300"></div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between relative z-10 pt-2 border-t border-slate-800/80">
+                    <div class="flex items-center gap-2">
+                        <button onclick="toggleLoop()" id="loopBtn" class="p-2.5 rounded-xl bg-slate-950/60 text-slate-400 hover:text-fuchsia-400 border border-slate-800 transition" title="Loop">
+                            <i data-lucide="repeat" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="toggleShuffle()" id="shuffleBtn" class="p-2.5 rounded-xl bg-slate-950/60 text-slate-400 hover:text-cyan-400 border border-slate-800 transition" title="Shuffle">
+                            <i data-lucide="shuffle" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <button onclick="previousTrack()" class="p-3 rounded-2xl bg-slate-950/80 text-slate-300 hover:text-white border border-slate-800 hover:border-fuchsia-500/50 transition active:scale-95 shadow-md">
+                            <i data-lucide="skip-back" class="w-5 h-5"></i>
+                        </button>
+                        <button onclick="togglePlayPause()" id="playPauseBtn" class="p-4 rounded-2xl bg-gradient-to-tr from-fuchsia-600 to-cyan-500 text-white shadow-lg shadow-fuchsia-600/40 transition transform active:scale-95 hover:scale-105">
+                            <i data-lucide="play" id="playPauseIcon" class="w-6 h-6 fill-current"></i>
+                        </button>
+                        <button onclick="nextTrack()" class="p-3 rounded-2xl bg-slate-950/80 text-slate-300 hover:text-white border border-slate-800 hover:border-fuchsia-500/50 transition active:scale-95 shadow-md">
+                            <i data-lucide="skip-forward" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button onclick="requestControl()" id="controlReqBtn" class="px-3 py-2 rounded-xl bg-fuchsia-600/20 border border-fuchsia-500/40 hover:bg-fuchsia-600/30 text-fuchsia-300 text-xs font-bold transition flex items-center gap-1.5" title="Request Control">
+                            <i data-lucide="key" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Ask DJ Control</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search & Queue Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- YouTube Search -->
+                <div class="neon-box bg-slate-900/80 backdrop-blur-xl rounded-3xl p-5 flex flex-col shadow-xl">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="orbitron text-sm font-bold tracking-wider text-white flex items-center gap-2">
+                            <i data-lucide="search" class="w-4 h-4 text-fuchsia-400"></i> YouTube Search
+                        </h3>
+                        <span class="text-[10px] text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">Instant</span>
+                    </div>
+
+                    <div class="relative mb-3">
+                        <input type="text" id="youtubeSearchInput" onkeydown="if(event.key==='Enter') searchYouTubeSongs()" class="w-full pl-4 pr-24 py-2.5 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:border-fuchsia-500 text-sm text-white placeholder-slate-500" placeholder="Search any song...">
+                        <button onclick="searchYouTubeSongs()" class="absolute right-1 top-1 bottom-1 px-4 bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-semibold rounded-lg text-xs transition">
+                            Search
+                        </button>
+                    </div>
+
+                    <div id="searchResultsList" class="flex-1 overflow-y-auto max-h-[260px] space-y-2 pr-1">
+                        <div class="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/60 flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <img src="https://placehold.co/100x100/111827/d946ef?text=Song" class="w-12 h-12 rounded-lg object-cover flex-shrink-0" alt="Thumb">
+                                <div class="min-w-0">
+                                    <h4 class="text-xs font-bold text-white truncate">Arabic Kuthu - Beast (Remix)</h4>
+                                    <p class="text-[11px] text-slate-400 truncate">Anirudh Ravichander • 3:42</p>
+                                </div>
+                            </div>
+                            <button onclick="addSongToQueue('Arabic Kuthu - Beast (Remix)', 'Anirudh Ravichander', 'https://placehold.co/300x200/111827/d946ef?text=Arabic+Kuthu', 'dQw4w9WgXcQ')" class="p-2 rounded-lg bg-fuchsia-600/20 hover:bg-fuchsia-600 text-fuchsia-300 hover:text-white transition">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Queue -->
+                <div class="neon-box bg-slate-900/80 backdrop-blur-xl rounded-3xl p-5 flex flex-col shadow-xl">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="orbitron text-sm font-bold tracking-wider text-white flex items-center gap-2">
+                            <i data-lucide="list-music" class="w-4 h-4 text-cyan-400"></i> Queue (<span id="queueCount">3</span>)
+                        </h3>
+                        <button onclick="clearQueue()" class="text-[11px] text-slate-400 hover:text-rose-400 transition">Clear</button>
+                    </div>
+
+                    <div id="queueListContainer" class="flex-1 overflow-y-auto max-h-[260px] space-y-2 pr-1">
+                        <div class="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <span class="text-xs font-bold text-fuchsia-400 w-4 text-center">1</span>
+                                <div class="min-w-0">
+                                    <h4 class="text-xs font-bold text-white truncate">Arabic Kuthu - Beast (Remix)</h4>
+                                    <p class="text-[10px] text-slate-400">PartyRockr • 3:42</p>
+                                </div>
+                            </div>
+                            <button onclick="voteSong(0)" class="px-2 py-1 bg-slate-900 hover:bg-fuchsia-600/30 text-slate-300 text-xs rounded-lg border border-slate-800 flex items-center gap-1 transition">
+                                <i data-lucide="thumbs-up" class="w-3 h-3 text-fuchsia-400"></i> <span id="voteCount-0">5</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="lg:col-span-4 flex flex-col gap-6">
+            <!-- Lyrics -->
+            <div class="neon-box bg-slate-900/80 backdrop-blur-xl rounded-3xl p-5 flex flex-col h-[280px] shadow-xl relative overflow-hidden">
+                <div class="flex items-center justify-between mb-3 relative z-10">
+                    <h3 class="orbitron text-sm font-bold tracking-wider text-white flex items-center gap-2">
+                        <i data-lucide="mic-2" class="w-4 h-4 text-fuchsia-400"></i> Live Karaoke Lyrics
+                    </h3>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-bold">Auto-Sync</span>
+                </div>
+                <div id="lyricsContainer" class="flex-1 overflow-y-auto space-y-4 pr-1 text-center py-4 relative z-10 scroll-smooth">
+                    <p class="text-xs text-slate-500">Ready for beat drop...</p>
+                    <p class="text-sm font-bold text-fuchsia-400 neon-glow scale-105">Vaathi coming, gym la storming!</p>
+                </div>
+            </div>
+
+            <!-- Chat -->
+            <div class="neon-box bg-slate-900/80 backdrop-blur-xl rounded-3xl p-5 flex flex-col h-[360px] shadow-xl">
+                <div class="flex items-center justify-between mb-3 pb-3 border-b border-slate-800">
+                    <h3 class="orbitron text-sm font-bold tracking-wider text-white flex items-center gap-2">
+                        <i data-lucide="message-square" class="w-4 h-4 text-cyan-400"></i> Party Chat
+                    </h3>
+                    <span id="chatOnlineCount" class="text-[11px] text-slate-400 bg-slate-950 px-2.5 py-1 rounded-full border border-slate-800 flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 4 Online
+                    </span>
+                </div>
+
+                <div id="chatMessages" class="flex-1 overflow-y-auto space-y-3 pr-2 text-xs">
+                    <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-bold text-fuchsia-400">DJ Master</span>
+                            <span class="text-[10px] text-slate-500">10:42 PM</span>
+                        </div>
+                        <p class="text-slate-300">Welcome to the Mass Party room! Drop requests!</p>
+                    </div>
+                </div>
+
+                <div class="pt-3 mt-2 border-t border-slate-800 flex gap-2">
+                    <input type="text" id="chatInput" onkeydown="if(event.key==='Enter') sendChatMessage()" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500" placeholder="Type a message...">
+                    <button onclick="sendChatMessage()" class="p-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl shadow transition active:scale-95 flex items-center justify-center">
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Share Modal -->
+    <div id="shareModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 hidden">
+        <div class="neon-box bg-slate-900 rounded-3xl p-6 w-full max-w-sm text-center relative shadow-2xl">
+            <h3 class="orbitron text-lg font-bold text-white mb-2">Invite Friends</h3>
+            <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 mb-4 inline-block">
+                <div class="orbitron text-2xl font-black text-fuchsia-400 tracking-widest" id="shareRoomCodeDisplay">VIP-MASS-99</div>
+            </div>
+            <button onclick="closeShareModal()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs transition">Close</button>
+        </div>
+    </div>
+
+    <!-- Devices Modal -->
+    <div id="devicesModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 hidden">
+        <div class="neon-box bg-slate-900 rounded-3xl p-6 w-full max-w-md shadow-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="orbitron text-base font-bold text-white">Connected Devices (4)</h3>
+                <button onclick="closeDevicesModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <button onclick="closeDevicesModal()" class="w-full mt-4 py-2.5 bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-semibold rounded-xl text-xs transition">Done</button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        let state = {
+            username: "PartyRockr",
+            roomCode: "VIP-MASS-99",
+            role: "admin",
+            isPlaying: false,
+            currentSongIndex: 0,
+            volume: 80,
+            queue: [
+                { title: "Arabic Kuthu - Beast (Remix)", artist: "Anirudh", thumb: "https://placehold.co/300x200/111827/d946ef?text=Arabic+Kuthu", duration: "3:42", votes: 5, ytId: "dQw4w9WgXcQ" }
+            ],
+            chatMessages: [{ sender: "DJ Master", text: "Welcome!", time: "10:42 PM" }]
+        };
+
+        let ytPlayer = null;
+        let playerReady = false;
+
+        function onYouTubeIframeAPIReady() {
+            ytPlayer = new YT.Player('youtubePlayerContainer', {
+                height: '0', width: '0', videoId: 'dQw4w9WgXcQ',
+                events: { 'onReady': (e) => { playerReady = true; ytPlayer.setVolume(state.volume); } }
+            });
+        }
+
+        function joinParty(role) {
+            state.role = role;
+            document.getElementById('roomModal').classList.add('hidden');
+        }
+
+        function togglePlayPause() {
+            state.isPlaying = !state.isPlaying;
+            const icon = document.getElementById('playPauseIcon');
+            icon.setAttribute('data-lucide', state.isPlaying ? 'pause' : 'play');
+            lucide.createIcons();
+            if(playerReady) {
+                state.isPlaying ? ytPlayer.playVideo() : ytPlayer.pauseVideo();
+            }
+        }
+
+        function updateMasterVolume(val) {
+            state.volume = val;
+            if(playerReady) ytPlayer.setVolume(val);
+        }
+
+        function addSongToQueue(title, artist, thumb, ytId) {
+            state.queue.push({ title, artist, thumb, duration: "3:45", votes: 1, ytId });
+            renderQueue();
+        }
+
+        function renderQueue() {
+            document.getElementById('queueCount').innerText = state.queue.length;
+            document.getElementById('queueListContainer').innerHTML = state.queue.map((song, idx) => `
+                <div class="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between gap-3">
+                    <span class="text-xs font-bold text-fuchsia-400">${idx + 1}</span>
+                    <div class="min-w-0 flex-1"><h4 class="text-xs font-bold text-white truncate">${song.title}</h4></div>
+                </div>
+            `).join('');
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            if(!input.value.trim()) return;
+            state.chatMessages.push({ sender: state.username, text: input.value, time: "Just now" });
+            input.value = "";
+            renderChat();
+        }
+
+        function renderChat() {
+            document.getElementById('chatMessages').innerHTML = state.chatMessages.map(m => `
+                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
+                    <span class="font-bold text-cyan-400">${m.sender}</span>: ${m.text}
+                </div>
+            `).join('');
+        }
+
+        function openShareModal() { document.getElementById('shareModal').classList.remove('hidden'); }
+        function closeShareModal() { document.getElementById('shareModal').classList.add('hidden'); }
+        function openDevicesModal() { document.getElementById('devicesModal').classList.remove('hidden'); }
+        function closeDevicesModal() { document.getElementById('devicesModal').classList.add('hidden'); }
+        function leaveRoom() { document.getElementById('roomModal').classList.remove('hidden'); }
+        function nextTrack() { alert("Next song triggered!"); }
+        function previousTrack() { alert("Previous song triggered!"); }
+        function toggleLoop() {}
+        function toggleShuffle() {}
+        function seekTrack(e) {}
+        function searchYouTubeSongs() {}
+        function voteSong(idx) {}
+        function clearQueue() { state.queue = []; renderQueue(); }
+        function requestControl() { alert("Control request sent to admin!"); }
+    </script>
+</body>
+</html>
